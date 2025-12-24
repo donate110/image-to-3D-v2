@@ -54,14 +54,14 @@ ENV CUDA_HOME=/usr/local/cuda-12.8
 ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
+# Copy the project first (needed for trellis2 setup script)
+COPY pipeline_service /workspace
+
 # Copy requirements files
 COPY docker/requirements.txt /tmp/requirements.txt
 
 # Install basic dependencies from requirements.txt
 RUN pip install -r /tmp/requirements.txt
-
-# Install flash-attn 2.8.2 prebuilt wheel for PyTorch 2.7 + Python 3.10 + CUDA 12.8
-RUN pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.7cxx11abiFALSE-cp311-cp311-linux_x86_64.whl
 
 # Install SPZ
 RUN wget https://github.com/404-Repo/spz/releases/download/v.0.1.2/pyspz-wheels-ubuntu-latest.zip && \
@@ -72,11 +72,13 @@ RUN wget https://github.com/404-Repo/spz/releases/download/v.0.1.2/pyspz-wheels-
 # Install ben2
 RUN pip install -e "git+https://github.com/PramaLLC/BEN2.git#egg=ben2"
 
-# Set working directory
-WORKDIR /workspace
+# Setup trellis2 dependencies using setup script
+# This includes: basic packages, flash-attn 2.7.3, nvdiffrast, nvdiffrec, cumesh, flexgemm, and o-voxel
+WORKDIR /workspace/libs/trellis2
+RUN bash setup.sh --basic --flash-attn --nvdiffrast --nvdiffrec --cumesh --flexgemm --o-voxel
 
-# Copy the project
-COPY pipeline_service /workspace
+# Set working directory back to /workspace
+WORKDIR /workspace
 
 EXPOSE 10006
 CMD ["python",  "serve.py"]

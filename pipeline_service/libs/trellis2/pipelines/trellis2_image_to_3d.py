@@ -478,6 +478,18 @@ class Trellis2ImageTo3DPipeline(Pipeline):
             )
         return out_mesh
     
+    def select_coords(self, coords, num_samples):
+        """
+        Select n smallest sparse structures in terms of number of voxels
+        """
+        counts = coords[:,0].unique(return_counts=True)[-1]
+        selected_coords = sorted(coords[:,1:].split(tuple(counts.tolist())), key = lambda x: len(x))[:num_samples]
+        sizes = torch.tensor(tuple(len(coo) for coo in selected_coords))
+        selected_coords = torch.cat(selected_coords, dim=0)
+        indices = torch.arange(num_samples).repeat_interleave(sizes).unsqueeze(-1).to(selected_coords.device, selected_coords.dtype)
+        selected_coords = torch.cat((indices, selected_coords), dim=1)
+        return selected_coords
+
     @torch.no_grad()
     def run(
         self,
@@ -491,6 +503,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
         return_latent: bool = False,
         pipeline_type: Optional[str] = None,
         max_num_tokens: int = 49152,
+        num_oversamples: int = 1,
     ) -> List[MeshWithVoxel]:
         """
         Run the pipeline.
@@ -506,6 +519,7 @@ class Trellis2ImageTo3DPipeline(Pipeline):
             return_latent (bool): Whether to return the latent codes.
             pipeline_type (str): The type of the pipeline. Options: '512', '1024', '1024_cascade', '1536_cascade'.
             max_num_tokens (int): The maximum number of tokens to use.
+            num_oversamples (int): The number of oversamples to generate, then select num_samples smallest structures.
         """
         # Check pipeline type
         pipeline_type = pipeline_type or self.default_pipeline_type
@@ -532,10 +546,12 @@ class Trellis2ImageTo3DPipeline(Pipeline):
         cond_512 = self.get_cond([image], 512)
         cond_1024 = self.get_cond([image], 1024) if pipeline_type != '512' else None
         ss_res = {'512': 32, '1024': 64, '1024_cascade': 32, '1536_cascade': 32}[pipeline_type]
+        num_oversamples = max(num_samples, num_oversamples)
         coords = self.sample_sparse_structure(
             cond_512, ss_res,
-            num_samples, sparse_structure_sampler_params
+            num_oversamples, sparse_structure_sampler_params
         )
+        coords = coords if num_oversamples <= num_samples else self.select_coords(coords, num_samples)
         if pipeline_type == '512':
             shape_slat = self.sample_shape_slat(
                 cond_512, self.models['shape_slat_flow_model_512'],

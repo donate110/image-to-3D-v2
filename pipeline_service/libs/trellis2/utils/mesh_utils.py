@@ -118,7 +118,7 @@ def read_ply(filename):
 
 
 def write_ply(
-    filename: str,
+    file_or_path,
     vertices: np.ndarray,
     tris: np.ndarray,
     quads: np.ndarray,
@@ -126,11 +126,11 @@ def write_ply(
     ascii: bool = False
 ):
     """
-    Write a mesh to a PLY file, with the option to save in ASCII or binary format,
+    Write a mesh to a PLY file or file-like object, with the option to save in ASCII or binary format,
     and optional per-vertex colors.
-    
+
     Args:
-        filename (str): The filename to write to.
+        file_or_path (str or file-like object): The filename to write to, or a file-like object (e.g., BytesIO).
         vertices (np.ndarray): [N, 3] The vertex positions.
         tris (np.ndarray): [M, 3] The triangle indices.
         quads (np.ndarray): [K, 4] The quad indices.
@@ -173,8 +173,16 @@ def write_ply(
     ]
     header = "\n".join(header_lines)
 
-    mode = 'w' if ascii else 'wb'
-    with open(filename, mode) as f:
+    # Determine if we need to open a file or use the provided file-like object
+    should_close = isinstance(file_or_path, str)
+
+    if should_close:
+        mode = 'w' if ascii else 'wb'
+        f = open(file_or_path, mode)
+    else:
+        f = file_or_path  # Use the file-like object directly
+
+    try:
         # Write header
         if ascii:
             f.write(header)
@@ -211,6 +219,9 @@ def write_ply(
                 f.write(struct.pack('<B3i', 3, *tri))
             for quad in quads:
                 f.write(struct.pack('<B4i', 4, *quad))
+    finally:
+        if should_close:
+            f.close()
                 
 
 def write_pbr_ply(

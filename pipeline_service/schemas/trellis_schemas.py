@@ -18,8 +18,10 @@ class TrellisParams(OverridableModel):
         return cls(
             sparse_structure_steps = settings.trellis_sparse_structure_steps,
             sparse_structure_cfg_strength = settings.trellis_sparse_structure_cfg_strength,
-            slat_steps = settings.trellis_slat_steps,
-            slat_cfg_strength = settings.trellis_slat_cfg_strength,
+            shape_slat_steps = settings.trellis_shape_slat_steps,
+            shape_slat_cfg_strength = settings.trellis_shape_slat_cfg_strength,
+            texture_slat_steps = settings.trellis_texture_slat_steps,
+            texture_slat_cfg_strength = settings.trellis_texture_slat_cfg_strength,
             num_oversamples = settings.trellis_num_oversamples,
         )
 
