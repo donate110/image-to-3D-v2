@@ -72,13 +72,20 @@ RUN wget https://github.com/404-Repo/spz/releases/download/v.0.1.2/pyspz-wheels-
 # Install ben2
 RUN pip install -e "git+https://github.com/PramaLLC/BEN2.git#egg=ben2"
 
-# Setup trellis2 dependencies using setup script
-# This includes: basic packages, flash-attn 2.7.3, nvdiffrast, nvdiffrec, cumesh, flexgemm, and o-voxel
+# Install only basic non-GPU dependencies during build
+# GPU-dependent packages (flash-attn, nvdiffrast, etc.) will be installed at runtime
 WORKDIR /workspace/libs/trellis2
-RUN bash setup.sh --basic --flash-attn --nvdiffrast --nvdiffrec --cumesh --flexgemm --o-voxel
+RUN pip install imageio imageio-ffmpeg tqdm easydict opencv-python-headless ninja trimesh transformers gradio==6.0.1 tensorboard pandas lpips zstandard && \
+    pip install git+https://github.com/EasternJournalist/utils3d.git@9a4eb15e4021b67b12c460c7057d642626897ec8 && \
+    apt install -y libjpeg-dev && \
+    pip install pillow-simd kornia timm
 
 # Set working directory back to /workspace
 WORKDIR /workspace
 
+# Copy entrypoint script
+COPY docker/entrypoint.sh /workspace/entrypoint.sh
+RUN chmod +x /workspace/entrypoint.sh
+
 EXPOSE 10006
-CMD ["python",  "serve.py"]
+ENTRYPOINT ["/workspace/entrypoint.sh"]

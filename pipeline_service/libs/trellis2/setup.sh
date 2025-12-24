@@ -62,8 +62,8 @@ if command -v nvidia-smi > /dev/null; then
 elif command -v rocminfo > /dev/null; then
     PLATFORM="hip"
 else
-    echo "Error: No supported GPU found"
-    exit 1
+    echo "Warning: No supported GPU found. Skipping GPU-dependent installations."
+    PLATFORM="none"
 fi
 
 if [ "$NEW_ENV" = true ] ; then

@@ -15,6 +15,51 @@ Automated pipeline for generating 3D models from 2D images.
 docker build -f docker/Dockerfile -t forge3d-pipeline:latest .
 ```
 
+### Push to Docker Registry
+
+**Docker Hub:**
+```bash
+# Login to Docker Hub
+docker login
+
+# Tag the image with your Docker Hub username
+docker tag forge3d-pipeline:latest elthworth/forge3d-pipeline:latest
+
+# Push to Docker Hub
+docker push elthworth/forge3d-pipeline:latest
+```
+
+**GitHub Container Registry (ghcr.io):**
+```bash
+# Login to GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+
+# Tag the image
+docker tag forge3d-pipeline:latest ghcr.io/YOUR_USERNAME/forge3d-pipeline:latest
+
+# Push to GitHub Container Registry
+docker push ghcr.io/YOUR_USERNAME/forge3d-pipeline:latest
+```
+
+### Deploy on RunPod
+
+1. **Create a new Pod** on RunPod with GPU (minimum 80GB VRAM recommended)
+
+2. **Use custom Docker image**: When creating the pod, use your pushed image:
+   - Docker Hub: `YOUR_USERNAME/forge3d-pipeline:latest`
+   - GHCR: `ghcr.io/YOUR_USERNAME/forge3d-pipeline:latest`
+
+3. **Configure the pod**:
+   - Expose port: `10006`
+   - Container disk: At least 50GB (for models and dependencies)
+   - GPU: A100 80GB, H100, or similar (minimum 61GB VRAM)
+
+4. **Environment variables** (optional): Add any environment variables from your `.env` file in the pod configuration
+
+5. **First startup note**: The first time the container starts, it will install GPU-dependent packages (flash-attn, nvdiffrast, etc.). This takes 5-10 minutes. Subsequent restarts will be instant.
+
+6. **Access the API**: Use the RunPod-provided endpoint (e.g., `https://YOUR_POD_ID-10006.proxy.runpod.net`)
+
 ## Run pipeline
 
 Copy `.env.sample` to `.env` and configure if needed
