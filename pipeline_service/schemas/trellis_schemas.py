@@ -9,8 +9,10 @@ class TrellisParams(OverridableModel):
     """Trellis parameters with automatic fallback to settings."""
     sparse_structure_steps: int
     sparse_structure_cfg_strength: float
-    slat_steps: int
-    slat_cfg_strength: float
+    shape_slat_steps: int
+    shape_slat_cfg_strength: float
+    texture_slat_steps: int
+    texture_slat_cfg_strength: float
     num_oversamples: int = 1
     
     @classmethod
