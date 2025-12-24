@@ -11,8 +11,13 @@ if [ ! -f "$GPU_SETUP_FLAG" ]; then
     
     cd /workspace/libs/trellis2
     
-    # Run setup with GPU-dependent packages
-    if bash setup.sh --basic --flash-attn --nvdiffrast --nvdiffrec --cumesh --flexgemm --o-voxel; then
+    # Install flash-attn from pre-built wheel to avoid OOM during compilation
+    echo "Installing flash-attn from pre-built wheel..."
+    pip install flash-attn --no-build-isolation || echo "Warning: flash-attn installation failed, continuing..."
+    
+    # Run setup without flash-attn (already installed above)
+    echo "Installing other GPU-dependent packages..."
+    if bash setup.sh --nvdiffrast --nvdiffrec --cumesh --flexgemm --o-voxel; then
         echo "==================================="
         echo "GPU setup completed successfully"
         echo "==================================="

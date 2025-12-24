@@ -46,19 +46,75 @@ docker push ghcr.io/YOUR_USERNAME/forge3d-pipeline:latest
 1. **Create a new Pod** on RunPod with GPU (minimum 80GB VRAM recommended)
 
 2. **Use custom Docker image**: When creating the pod, use your pushed image:
-   - Docker Hub: `YOUR_USERNAME/forge3d-pipeline:latest`
-   - GHCR: `ghcr.io/YOUR_USERNAME/forge3d-pipeline:latest`
+   - Docker Hub: `elthworth/forge3d-pipeline:latest`
+   - GHCR: `ghcr.io/elthworth/forge3d-pipeline:latest`
 
 3. **Configure the pod**:
    - Expose port: `10006`
-   - Container disk: At least 50GB (for models and dependencies)
+   - **Container disk**: At least **50GB** (for models and dependencies)
+   - **Volume size (RAM)**: At least **40GB** (to handle package installation)
    - GPU: A100 80GB, H100, or similar (minimum 61GB VRAM)
+   - **Docker Command**: Leave empty (the image has a built-in entrypoint)
+     - The container automatically runs `/workspace/entrypoint.sh` which handles GPU setup and starts the service
+     - To override: Use custom command like `bash -c "python serve.py"` (skips GPU auto-setup)
 
 4. **Environment variables** (optional): Add any environment variables from your `.env` file in the pod configuration
 
 5. **First startup note**: The first time the container starts, it will install GPU-dependent packages (flash-attn, nvdiffrast, etc.). This takes 5-10 minutes. Subsequent restarts will be instant.
 
 6. **Access the API**: Use the RunPod-provided endpoint (e.g., `https://YOUR_POD_ID-10006.proxy.runpod.net`)
+
+### Troubleshooting RunPod Deployment
+
+**Can't access the API endpoint?**
+
+1. **Check pod logs**:
+   - In RunPod dashboard, click on your pod → "Logs"
+   - Look for "Application startup complete" or errors
+   - First startup takes 5-10 minutes for GPU package installation
+
+2. **Verify port configuration**:
+   - In pod settings, ensure port `10006` is exposed
+   - Use the correct HTTP port URL: `https://YOUR_POD_ID-10006.proxy.runpod.net`
+
+3. **Test with health endpoint**:
+   ```bash
+   curl https://YOUR_POD_ID-10006.proxy.runpod.net/health
+   ```
+   Should return: `{"status":"ready"}`
+
+4. **Common issues**:
+   - **OOM (Out of Memory) during startup**: Container RAM exhausted during package installation
+     - **Solution**: Increase pod RAM/Volume size to 40GB+ in RunPod settings
+     - The entrypoint now uses pre-built flash-attn wheels to reduce memory usage
+     - Alternative: Use a pod template with more system RAM
+   - **GPU setup still running**: Wait for entrypoint script to complete (5-10 minutes on first run)
+   - **Out of GPU memory**: Upgrade to pod with 80GB+ VRAM
+   - **Wrong endpoint URL**: Use the HTTP port URL (not SSH/terminal port)
+   - **Container keeps restarting**: Check system logs for OOM errors
+
+5. **Manual debugging** (via RunPod Web Terminal):
+   ```bash
+   # Check if service is running
+   ps aux | grep python
+   
+   # Check if port is listening
+   netstat -tlnp | grep 10006
+   
+   # Test locally
+   curl http://localhost:10006/health
+   
+   # View service logs
+   tail -f /tmp/*.log  # if logs are redirected
+   
+   # Restart service manually
+   cd /workspace && python serve.py
+   ```
+
+6. **Persistent storage**: To keep GPU packages installed across pod restarts:
+   - Use RunPod's "Volume" feature
+   - Mount volume to `/workspace`
+   - This prevents reinstalling GPU packages each time
 
 ## Run pipeline
 
